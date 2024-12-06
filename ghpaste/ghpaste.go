@@ -82,6 +82,8 @@ func postCommentToIssue(token, owner, repo string, issueNumber int, comment stri
 	req.Header.Set("Authorization", "token "+token)
 	req.Header.Set("Content-Type", "application/json")
 
+	fmt.Println(url + "に投稿を送信します")
+
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -93,6 +95,19 @@ func postCommentToIssue(token, owner, repo string, issueNumber int, comment stri
 		bodyBytes, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("GitHub API がステータスコード %d を返しました: %s", resp.StatusCode, string(bodyBytes))
 	}
+
+	var responseBody map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&responseBody); err != nil {
+		return fmt.Errorf("レスポンスの解析に失敗しました: %v", err)
+	}
+
+	commentID, ok := responseBody["id"].(float64)
+	if !ok {
+		return fmt.Errorf("コメントIDを取得できませんでした")
+	}
+
+	commentURL := fmt.Sprintf("https://github.com/%s/%s/issues/%d#issuecomment-%d", owner, repo, issueNumber, int(commentID))
+	fmt.Println("コメントが正常に投稿されました: " + commentURL)
 
 	return nil
 }
